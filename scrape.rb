@@ -8,7 +8,7 @@
 require 'httparty'
 require 'json'
 
-def scrape
+def get_pages
   baseurl = "http://ohsheglows.com/categories/recipes-2/"
   pages = (2..143).map { |page| "page/#{page}/" }
   pages = [""].concat pages
@@ -16,9 +16,9 @@ def scrape
 
   links = []
 
-  urls.each_with_index do |url, index|
+  urls.first(2).each_with_index do |url, index|
     puts "Scraping #{index} of #{urls.count}"
-    response = HTTParty.post("http://www.jamapi.xyz/", :body => 
+    response = HTTParty.post("http://www.jamapi.xyz/", :body =>
       {
         "url" => url,
         "json_data" => '{"links": [{"elem": ".archive_post_box.hentry a.entry-title", "location": "href"}]}'
@@ -27,33 +27,49 @@ def scrape
     links.concat response['links'].map { |link| link['value'] }.map { |link| link['location'] }
   end
 
+  puts "Found #{links.size} links..."
+  get_data_from_links(links)
+end
+
+def get_data_from_links(links)
   puts "====="
   puts "Found #{links.count}"
   puts "====="
 
   recipes = []
-  links.each_with_index do |link, index|
+  links.first(5).each_with_index do |link, index|
     recipe = {}
     puts "Scraping #{index} of #{links.count}, #{link}"
-    response = HTTParty.post("http://www.jamapi.xyz/", :body => 
+    response = HTTParty.post("http://www.jamapi.xyz/", :body =>
       {
         "url" => link,
 
         "json_data" => "{
+                            'title': '.headline_area .entry-title',
                             'ingredients': [{'elem': '.post_box .format_text .recipe-content .ingredients.clear .ingredients .ingredient', 'value': 'text' }],
-                            'directions': '.post_box .format_text .recipe-content #instructions'
+                            'directions': '.post_box .format_text .recipe-content #instructions',
+                            'photo': [{'elem': '.post_box .entry-content p img', 'src': 'src' }]
                         }"
-        # "json_data" => "{
-        #                   'ingredients': '.post_box .format_text .recipe-content .ingredients.clear .ingredients',
-        #                   'directions': '.post_box .format_text .recipe-content .ingredients.clear #instructions'
-        #                 }"
       }
     )
     puts response
     recipes.push response unless response.key?("error")
   end
 
-  puts recipes.to_json
+  write_to_database(recipes)
 end
 
-scrape
+def write_to_database(recipes)
+  Item.new(
+    title: recipe.title,
+    provider: "Oh She Glows",
+    photo: recipe.photo.first.src.split('/').last,
+    category: 1,
+    metadata: {
+      directions: recipe.directions,
+      ingredients: recipe.ingredients
+    }
+  )
+end
+
+get_pages
