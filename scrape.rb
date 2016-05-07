@@ -1,17 +1,7 @@
 #!/usr/bin/env ruby
 # You'll need to install these
-# gem install nokogiri
-# gem install csv
-# gem install find
-# gem install sanitize
 # gem install json
 # gem install httparty
-
-require 'find'
-require 'rubygems'
-require 'nokogiri'
-require 'sanitize'
-require 'csv'
 
 # Maybe we can use Jam here http://www.jamapi.xyz/
 
